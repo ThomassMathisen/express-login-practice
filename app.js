@@ -35,10 +35,15 @@ passport.use(
       if (!user) {
         return done(null, false, { message: "Incorrect username" });
       }
-      if (user.password !== password) {
-        return done(null, false, { message: "Incorrect password" });
-      }
-      return done(null, user);
+      bcrypt.compare(password, user.password, (err, res) => {
+        if (res) {
+          // passwords match! log user in
+          return done(null, user)
+        } else {
+          // passwords do not match!
+          return done(null, false, { message: "Incorrect password" })
+        }
+      })
     });
   })
 );
@@ -71,17 +76,22 @@ app.get("/log-out", (req, res, next) => {
   });
 });
 
-app.post("/sign-up", (req, res, next) => {
+app.post('/sign-up', async (req, res, next) => {
+  await bcrypt.hash(req.body.password, 10, (err, hash) => {
+    if (err) {
+      return err;
+    }
     const user = new User({
       username: req.body.username,
-      password: req.body.password
-    }).save(err => {
-      if (err) { 
+      password: hash,
+    }).save((err) => {
+      if (err) {
         return next(err);
       }
-      res.redirect("/");
+      res.redirect('/');
     });
   });
+});
 
   app.post(
     "/log-in",
